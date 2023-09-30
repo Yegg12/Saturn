@@ -330,6 +330,7 @@ void saturn_update() {
         schroma_imgui_init();
     }
 
+    
     if (camera_frozen && keyframe_playing) {
         should_update_cam_from_keyframes = false;
         vec3f_copy(gCamera->pos, freezecamPos);
@@ -675,8 +676,4 @@ void saturn_on_splash_finish() {
 }
 s32 saturn_should_show_splash() {
     return configSaturnSplash;
-}
-
-bool saturn_timeline_exists(const char* name) {
-    return k_frame_keys.find(name) != k_frame_keys.end();
 }
