@@ -31,6 +31,7 @@ static int keyboard_map_scancode(int scancode) {
 }
 
 bool keyboard_on_key_down(int scancode) {
+    saturn_onkeydown(scancode - 1); // (YEGG) TL;DR, blame pc port for the -1, the defines are off
     if (saturn_disable_sm64_input()) return false;
 
     int mapped = keyboard_map_scancode(scancode);

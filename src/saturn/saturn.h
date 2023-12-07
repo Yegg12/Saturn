@@ -176,6 +176,7 @@ extern "C" {
     void saturn_on_splash_finish();
     bool saturn_timeline_exists(const char*);
     s32 saturn_should_show_splash();
+    void saturn_onkeydown(int);
 #ifdef __cplusplus
 }
 #endif

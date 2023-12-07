@@ -155,7 +155,6 @@ int autosaveDelay = -1;
 u16 gChromaKeyColor = 0x07C1;
 u16 gChromaKeyBackground = 0;
 
-int keyResetter;
 
 u8 godmode_temp_off = false;
 
@@ -168,25 +167,21 @@ float key_increase_val(std::vector<float> vecfloat) {
     return (next_val - this_val) / k_distance_between;
 }
 
+extern "C"
+void saturn_onkeydown(int scancode) {
+    // printf("%d\n", scancode);
+    if (scancode == SDL_SCANCODE_F2) {
+        if (gMarioState->action == ACT_IDLE) set_mario_action(gMarioState, ACT_DEBUG_FREE_MOVE, 0);
+        else set_mario_action(gMarioState, ACT_IDLE, 0);
+    } 
+}
+
 // SATURN Machinima Functions
 
-void saturn_update() {
-
-    // Keybinds
-
+void keybinds_update() {
     if (mario_exists) {
         if (gPlayer1Controller->buttonPressed & D_JPAD) {
             showMenu = !showMenu;
-        }
-        if (keyResetter == 6) {
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_F2]) {
-                if (gMarioState->action == ACT_DEBUG_FREE_MOVE) {
-                    reset_camera(gCamera);
-                    set_mario_action(gMarioState, ACT_IDLE, 0);
-                }
-                else set_mario_action(gMarioState, ACT_DEBUG_FREE_MOVE, 0);
-                keyResetter = 0;
-            }
         }
         if (!saturn_disable_sm64_input()) {
             if (gPlayer1Controller->buttonPressed & U_JPAD) camera_frozen = !camera_frozen;
@@ -202,12 +197,9 @@ void saturn_update() {
             }
         }
     }
+}
 
-    if (keyResetter < 6)
-        keyResetter += 1;
-
-    // Machinima
-
+void camera_update() {
     machinimaMode = (camera_frozen) ? 1 : 0;
     machinimaKeyframing = (keyframe_playing && active_data_type == KEY_CAMERA);
 
@@ -254,55 +246,9 @@ void saturn_update() {
     }
 
     camera_default_fov = camera_fov + 5.0f;
+}
 
-    //SDL_GetMouseState(&camera_view_move_x, &camera_view_move_y);
-
-    if (gCurrLevelNum == LEVEL_SA || autoChroma) {
-        if (!is_chroma_keying) is_chroma_keying = true;
-    }
-
-    //if (gCurrLevelNum == LEVEL_SA && !is_chroma_keying) {
-        //is_chroma_keying = true;
-        // Called once when entering Chroma Key Stage
-        //prev_quicks[0] = enable_shadows;
-        //prev_quicks[1] = enable_dust_particles;
-        //prev_quicks[2] = configHUD;
-        //enable_shadows = false;
-        //enable_dust_particles = false;
-        //configHUD = false;
-    //}
-    if (gCurrLevelNum != LEVEL_SA && !autoChroma) {
-        if (!is_chroma_keying) is_chroma_keying = false;
-        // Called once when exiting Chroma Key Stage
-        //enable_shadows = prev_quicks[0];
-        //enable_dust_particles = prev_quicks[1];
-        //configHUD = prev_quicks[2];
-    }
-
-    saturn_launch_timer++;
-    //std::cout << saturn_launch_timer << std::endl;
-    if (gCurrLevelNum == LEVEL_SA && saturn_launch_timer < 50) {
-        gMarioState->faceAngle[1] = 0;
-        if (gCamera) { // i hate the sm64 camera system aaaaaaaaaaaaaaaaaa
-            float dist = 0;
-            s16 yaw, pitch;
-            vec3f_set(gCamera->pos, 0.f, 192.f, 264.f);
-            vec3f_set(gCamera->focus, 0.f, 181.f, 28.f);
-            vec3f_copy(freezecamPos, gCamera->pos);
-            vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
-            freezecamYaw = (float)yaw;
-            freezecamPitch = (float)pitch;
-            vec3f_copy(gLakituState.pos, gCamera->pos);
-            vec3f_copy(gLakituState.focus, gCamera->focus);
-            vec3f_copy(gLakituState.goalPos, gCamera->pos);
-            vec3f_copy(gLakituState.goalFocus, gCamera->focus);
-            gCamera->yaw = calculate_yaw(gCamera->focus, gCamera->pos);
-            gLakituState.yaw = gCamera->yaw;
-        }
-    }
-
-    // Keyframes
-    
+void keyframe_update() {
     bool justFinished = false;
     if (keyframe_playing) {
         mcam_timer++;
@@ -343,11 +289,11 @@ void saturn_update() {
         gCamera->yaw = calculate_yaw(gCamera->focus, gCamera->pos);
         gLakituState.yaw = gCamera->yaw;
     }
+}
 
-    // Animations
-
+void animation_update() {
     if (mario_exists) {
-        if ((keyframe_playing || justFinished) && k_prev_anim != k_current_anim && k_current_anim != -1) anim_play_button(k_current_anim);
+        if ((keyframe_playing) && k_prev_anim != k_current_anim && k_current_anim != -1) anim_play_button(k_current_anim);
         k_prev_anim = k_current_anim;
 
         if (is_anim_paused) {
@@ -393,9 +339,9 @@ void saturn_update() {
             if (using_chainer && is_anim_playing) saturn_run_chainer();
         }
     }
+}
 
-    // Misc
-
+void misc_update() {
     mario_exists = (gMarioState->action != ACT_UNINITIALIZED & sCurrPlayMode != 2 & mario_loaded);
 
     if (!mario_exists) {
@@ -419,9 +365,49 @@ void saturn_update() {
     if (is_spinning && mario_exists) {
         gMarioState->faceAngle[1] += (s16)(spin_mult * 15 * 182.04f);
     }
+}
 
-    saturn_cmd_resume();
+void saturn_update() {
 
+    keybinds_update();
+    camera_update();
+
+
+    if (gCurrLevelNum == LEVEL_SA || autoChroma) {
+        if (!is_chroma_keying) is_chroma_keying = true;
+    }
+
+    if (gCurrLevelNum != LEVEL_SA && !autoChroma) {
+        if (!is_chroma_keying) is_chroma_keying = false;
+    }
+
+    saturn_launch_timer++;
+    if (gCurrLevelNum == LEVEL_SA && saturn_launch_timer < 50) {
+        gMarioState->faceAngle[1] = 0;
+        if (gCamera) { // i hate the sm64 camera system aaaaaaaaaaaaaaaaaa
+                       // (YEGG) i think this may be on you
+            float dist = 0;
+            s16 yaw, pitch;
+            vec3f_set(gCamera->pos, 0.f, 192.f, 264.f);
+            vec3f_set(gCamera->focus, 0.f, 181.f, 28.f);
+            vec3f_copy(freezecamPos, gCamera->pos);
+            vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
+            freezecamYaw = (float)yaw;
+            freezecamPitch = (float)pitch;
+            vec3f_copy(gLakituState.pos, gCamera->pos);
+            vec3f_copy(gLakituState.focus, gCamera->focus);
+            vec3f_copy(gLakituState.goalPos, gCamera->pos);
+            vec3f_copy(gLakituState.goalFocus, gCamera->focus);
+            gCamera->yaw = calculate_yaw(gCamera->focus, gCamera->pos);
+            gLakituState.yaw = gCamera->yaw;
+        }
+    }
+
+    keyframe_update();
+    animation_update();
+    misc_update();
+    
+>>>>>>> ea0e7831 (Split up update function, new F2 handler)
     // Autosave
 
     if (autosaveDelay <= 0) autosaveDelay = 30 * configAutosaveDelay;
@@ -446,10 +432,16 @@ float saturn_keyframe_setup_interpolation(std::string id, int frame, int* keyfra
     // Interpolate, formulas from easings.net
     float x = (frame - keyframes[*keyframe].position) / (float)(keyframes[*keyframe + 1].position - keyframes[*keyframe].position);
     if (*last) x = 1;
-    else if (keyframes[*keyframe].curve == InterpolationCurve::SINE) x = -(cosf(3.141592f * x) - 1) / 2;
-    else if (keyframes[*keyframe].curve == InterpolationCurve::QUADRATIC) x = x < 0.5 ? 2 * x * x : 1 - pow(-2 * x + 2, 2) / 2;
-    else if (keyframes[*keyframe].curve == InterpolationCurve::CUBIC) x = x < 0.5 ? 4 * x * x * x : 1 - pow(-2 * x + 2, 3) / 2;
-    else if (keyframes[*keyframe].curve == InterpolationCurve::WAIT) x = floor(x);
+    else switch (keyframes[*keyframe].curve) {
+        case InterpolationCurve::SINE:
+            -(cosf(3.141529f * x) - 1) / 2;
+        case InterpolationCurve::QUADRATIC:
+            x < 0.5 ? 2 * x * x : 1 - pow(-2 * x + 2, 2) / 2;
+        case InterpolationCurve::CUBIC:
+            x < 0.5 ? 4 * x * x * x : 1 - pow(-2 * x + 2, 3) / 2;
+        case InterpolationCurve::WAIT:
+            floor(x);
+    }
 
     return x;
 }
