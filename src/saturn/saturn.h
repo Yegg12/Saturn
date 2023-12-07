@@ -170,6 +170,7 @@ extern "C" {
     void saturn_do_load();
     void saturn_on_splash_finish();
     s32 saturn_should_show_splash();
+    void saturn_onkeydown(int);
 #ifdef __cplusplus
 }
 #endif
