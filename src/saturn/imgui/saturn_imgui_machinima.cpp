@@ -174,8 +174,8 @@ void smachinima_imgui_controls(SDL_Event * event) {
 
         case SDL_MOUSEMOTION:
             SDL_Delay(2);
-            camera_view_move_x = event->motion.xrel;
-            camera_view_move_y = event->motion.yrel;
+            camera.view_move[0] = event->motion.xrel;
+            camera.view_move[1] = event->motion.yrel;
         
         break;
     }
@@ -221,6 +221,63 @@ void smachinima_imgui_init() {
     saturn_load_anim_folder("", &custom_anim_index);
 }
 
+void smachinima_imgui_update() {
+    ImGui::Checkbox("Machinima Camera", &camera.frozen);
+    if (configMCameraMode == 2) {
+        ImGui::SameLine(); imgui_bundled_help_marker("Move Camera -> LShift + Mouse Buttons");
+    } else if (configMCameraMode == 1) {
+        ImGui::SameLine(); imgui_bundled_help_marker("Pan Camera -> R + C-Buttons\nRaise/Lower Camera -> L + C-Buttons\nRotate Camera -> L + Crouch + C-Buttons");
+    } else if (configMCameraMode == 0) {
+        ImGui::SameLine(); imgui_bundled_help_marker("Move Camera -> Y/G/H/J\nRaise/Lower Camera -> T/U\nRotate Camera -> R + Y/G/H/J");
+    }
+    if (configMCameraMode == 0 && camera.frozen || configMCameraMode == 1 && camera.frozen) {
+        ImGui::SliderFloat("Speed", &camVelSpeed, 0.0f, 2.0f);
+        imgui_bundled_tooltip("Controls the speed of the machinima camera while enabled. Default is 1.");
+    }
+
+    ImGui::SliderFloat("FOV", &camera_fov, 0.0f, 100.0f);
+    imgui_bundled_tooltip("Controls the FOV of the in-game camera. Default is 50.\nKeybind -> N/M");
+    ImGui::Checkbox("Smooth###smooth_fov", &camera.fov_smooth);
+
+    if (mario_exists) {
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::Text("Animations");
+        ImGui::Dummy(ImVec2(0, 5));
+
+        // Warp To Level
+
+        ImGui::Dummy(ImVec2(0, 5));
+    }
+
+    ImGui::Dummy(ImVec2(0, 5));
+
+    if (ImGui::BeginTable("table_quick_toggles", 2)) {
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("HUD", &configHUD);
+        imgui_bundled_tooltip("Controls the in-game HUD visibility.");
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("Shadows", &enable_shadows);
+        imgui_bundled_tooltip("Displays the shadows of various objects.");
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("Invulnerability", (bool*)&enable_immunity);
+        imgui_bundled_tooltip("If enabled, Mario will be invulnerable to most enemies and hazards.");
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("NPC Dialogue", (bool*)&enable_dialogue);
+        imgui_bundled_tooltip("Whether or not to trigger dialogue when interacting with an NPC or readable sign.");
+        if (mario_exists && gMarioState->action != ACT_FIRST_PERSON) {
+            ImGui::TableNextColumn();
+            if (ImGui::Button("Sleep")) {
+                set_mario_action(gMarioState, ACT_START_SLEEPING, 0);
+            }
+        }
+        ImGui::EndTable();
+    }
+    if (mario_exists) {
+        const char* mEnvSettings[] = { "Default", "None", "Snow", "Blizzard" };
+        ImGui::Combo("Environment###env_dropdown", (int*)&gLevelEnv, mEnvSettings, IM_ARRAYSIZE(mEnvSettings));
+    }
+}
+
 void imgui_machinima_quick_options() {
     if (ImGui::MenuItem(ICON_FK_CLOCK_O " Limit FPS",      "F4", limit_fps)) {
         limit_fps = !limit_fps;
@@ -253,7 +310,7 @@ void imgui_machinima_quick_options() {
 
         if (ImGui::Button("Warp to Level")) {
             autoChroma = false;
-            camera_frozen = false;
+            camera.frozen = false;
 
             warp_to_level(current_slevel_index, (s32)currentChromaArea, -1);
             // Erase existing timelines

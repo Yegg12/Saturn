@@ -95,7 +95,7 @@ std::map<std::string, std::pair<std::pair<void*, KeyframeType>, std::pair<bool, 
     SATURN_KFENTRY_BOOL("k_hud", configHUD, "HUD"),
     SATURN_KFENTRY_BOOL("k_time_freeze", enable_time_freeze, "Time Freeze"),
     SATURN_KFENTRY_FLOAT("k_fov", camera_fov, "FOV"),
-    SATURN_KFENTRY_FLOAT("k_focus", camera_focus, "Follow"),
+    SATURN_KFENTRY_FLOAT("k_focus", camera.focus, "Follow"),
     SATURN_KFENTRY_FLOAT("k_c_camera_pos0", freezecamPos[0], "Camera Pos X"),
     SATURN_KFENTRY_FLOAT("k_c_camera_pos1", freezecamPos[1], "Camera Pos Y"),
     SATURN_KFENTRY_FLOAT("k_c_camera_pos2", freezecamPos[2], "Camera Pos Z"),
@@ -139,8 +139,8 @@ std::string full_file_path(char* filename) {
 void saturn_project_game_handler(SaturnFormatStream* stream, int version) {
     u16 flags = saturn_format_read_int16(stream);
     u8 walkpoint = saturn_format_read_int8(stream);
-    camera_frozen = flags & SATURN_PROJECT_FLAG_CAMERA_FROZEN;
-    camera_fov_smooth = flags & SATURN_PROJECT_FLAG_CAMERA_SMOOTH;
+    camera.frozen = flags & SATURN_PROJECT_FLAG_CAMERA_FROZEN;
+    camera.fov_smooth = flags & SATURN_PROJECT_FLAG_CAMERA_SMOOTH;
     linkMarioScale = flags & SATURN_PROJECT_FLAG_SCALE_LINKED;
     enable_head_rotations = flags & SATURN_PROJECT_FLAG_MARIO_HEAD_ROTATIONS;
     enable_dust_particles = flags & SATURN_PROJECT_FLAG_DUST_PARTICLES;
@@ -161,7 +161,7 @@ void saturn_project_game_handler(SaturnFormatStream* stream, int version) {
     camVelSpeed = saturn_format_read_float(stream);
     camVelRSpeed = saturn_format_read_float(stream);
     camera_fov = saturn_format_read_float(stream);
-    camera_focus = saturn_format_read_float(stream);
+    camera.focus = saturn_format_read_float(stream);
     current_eye_state = saturn_format_read_int8(stream);
     scrollHandState = saturn_format_read_int8(stream);
     scrollCapState = saturn_format_read_int8(stream);
@@ -423,8 +423,8 @@ void saturn_save_project(char* filename) {
     saturn_format_new_section(&stream, SATURN_PROJECT_GAME_IDENTIFIER);
     u16 flags = 0;
     u8 walkpoint = run_speed;
-    if (camera_frozen) flags |= SATURN_PROJECT_FLAG_CAMERA_FROZEN;
-    if (camera_fov_smooth) flags |= SATURN_PROJECT_FLAG_CAMERA_SMOOTH;
+    if (camera.frozen) flags |= SATURN_PROJECT_FLAG_CAMERA_FROZEN;
+    if (camera.fov_smooth) flags |= SATURN_PROJECT_FLAG_CAMERA_SMOOTH;
     if (linkMarioScale) flags |= SATURN_PROJECT_FLAG_SCALE_LINKED;
     if (enable_head_rotations) flags |= SATURN_PROJECT_FLAG_MARIO_HEAD_ROTATIONS;
     if (enable_dust_particles) flags |= SATURN_PROJECT_FLAG_DUST_PARTICLES;
@@ -449,7 +449,7 @@ void saturn_save_project(char* filename) {
     saturn_format_write_float(&stream, camVelSpeed);
     saturn_format_write_float(&stream, camVelRSpeed);
     saturn_format_write_float(&stream, camera_fov);
-    saturn_format_write_float(&stream, camera_focus);
+    saturn_format_write_float(&stream, camera.focus);
     saturn_format_write_int8(&stream, current_eye_state);
     saturn_format_write_int8(&stream, scrollHandState);
     saturn_format_write_int8(&stream, scrollCapState);

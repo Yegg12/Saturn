@@ -10,19 +10,20 @@
 
 extern bool mario_exists;
 
-extern bool camera_frozen;
-extern float camera_speed;
-extern float camera_focus;
-extern float camera_savestate_mult;
-extern bool camera_fov_smooth;
-extern bool is_camera_moving;
+extern struct camera_t {
+    bool frozen;
+    float speed;
+    float focus;
+    float savestate_mult;
+    bool fov_smooth;
+    bool is_moving;
 
-extern bool camera_view_enabled;
-extern bool camera_view_moving;
-extern bool camera_view_zooming;
-extern bool camera_view_rotating;
-extern int camera_view_move_x;
-extern int camera_view_move_y;
+    bool view_enabled;
+    bool view_moving;
+    bool view_zooming;
+    bool view_rotating;
+    int view_move[2];
+} camera;
 
 extern int current_eye_state;
 
