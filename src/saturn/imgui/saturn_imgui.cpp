@@ -427,7 +427,7 @@ void saturn_keyframe_window() {
         }
     }
 
-    if (camera_frozen) {
+    if (camera.frozen) {
         if (keyframe_playing || k_current_frame != k_previous_frame) {
             should_update_cam_from_keyframes = false;
             vec3f_copy(gCamera->pos, freezecamPos);
@@ -466,7 +466,7 @@ void saturn_imgui_update() {
     
     windowStartHeight = (showStatusBars) ? 48 : 30;
 
-    camera_savestate_mult = 1.f;
+    camera.savestate_mult = 1.f;
 
     if (showMenu) {
         if (ImGui::BeginMainMenuBar()) {
@@ -547,13 +547,13 @@ void saturn_imgui_update() {
             if (ImGui::BeginMenu("Camera")) {
                 windowCcEditor = false;
 
-                ImGui::Checkbox("Freeze", &camera_frozen);
-                if (camera_frozen) {
+                ImGui::Checkbox("Freeze", &camera.frozen);
+                if (camera.frozen) {
                     saturn_keyframe_camera_popout("Camera", "k_c_camera");
                     ImGui::SameLine(200); ImGui::TextDisabled(translate_bind_to_name(configKeyFreeze[0]));
 
                     if (ImGui::BeginMenu("Options###camera_options")) {
-                        camera_savestate_mult = 0.f;
+                        camera.savestate_mult = 0.f;
                         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
                         ImGui::BeginChild("###model_metadata", ImVec2(200, 90), true, ImGuiWindowFlags_NoScrollbar);
                         ImGui::TextDisabled("pos %.f, %.f, %.f", gCamera->pos[0], gCamera->pos[1], gCamera->pos[2]);
@@ -607,13 +607,13 @@ void saturn_imgui_update() {
                 saturn_keyframe_float_popout(&camera_fov, "FOV", "k_fov");
                 ImGui::SameLine(200); ImGui::TextDisabled("N/M");
                 ImGui::PopItemWidth();
-                ImGui::Checkbox("Smooth###fov_smooth", &camera_fov_smooth);
+                ImGui::Checkbox("Smooth###fov_smooth", &camera.fov_smooth);
 
                 ImGui::Separator();
                 ImGui::PushItemWidth(100);
-                ImGui::SliderFloat("Follow", &camera_focus, 0.0f, 1.0f);
-                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { camera_focus = 1.f; }
-                saturn_keyframe_float_popout(&camera_focus, "Follow", "k_focus");
+                ImGui::SliderFloat("Follow", &camera.focus, 0.0f, 1.0f);
+                if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { camera.focus = 1.f; }
+                saturn_keyframe_float_popout(&camera.focus, "Follow", "k_focus");
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
             }
@@ -817,7 +817,7 @@ void saturn_imgui_update() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glUseProgram(last_program);
 
-    if (was_camera_frozen && !camera_frozen && k_frame_keys.find("k_c_camera_pos0") != k_frame_keys.end()) {
+    if (was_camera_frozen && !camera.frozen && k_frame_keys.find("k_c_camera_pos0") != k_frame_keys.end()) {
         k_frame_keys.erase("k_c_camera_pos0");
         k_frame_keys.erase("k_c_camera_pos1");
         k_frame_keys.erase("k_c_camera_pos2");
@@ -825,7 +825,7 @@ void saturn_imgui_update() {
         k_frame_keys.erase("k_c_camera_pitch");
         k_frame_keys.erase("k_c_camera_roll");
     }
-    was_camera_frozen = camera_frozen;
+    was_camera_frozen = camera.frozen;
 
     if (!is_gameshark_open) apply_cc_from_editor();
 }

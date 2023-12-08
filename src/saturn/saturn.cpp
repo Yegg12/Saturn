@@ -1,6 +1,7 @@
 #include "saturn.h"
 
 #include <string>
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <map>
@@ -19,19 +20,14 @@
 
 bool mario_exists;
 
-bool camera_frozen = true;
-float camera_speed = 0.0f;
-float camera_focus = 1.f;
-float camera_savestate_mult = 1.f;
-bool camera_fov_smooth = false;
-bool is_camera_moving;
+struct camera_t camera {
+    .frozen = true,
+    .speed = 0.0f,
+    .focus = 1.f,
+    .savestate_mult = 1.f,
+    .fov_smooth = false,
+};
 
-bool camera_view_enabled;
-bool camera_view_moving;
-bool camera_view_zooming;
-bool camera_view_rotating;
-int camera_view_move_x;
-int camera_view_move_y;
 
 bool enable_head_rotations = false;
 bool enable_shadows = false;
@@ -178,7 +174,7 @@ void keybinds_update() {
             showMenu = !showMenu;
         }
         if (!saturn_disable_sm64_input()) {
-            if (gPlayer1Controller->buttonPressed & U_JPAD) camera_frozen = !camera_frozen;
+            if (gPlayer1Controller->buttonPressed & U_JPAD) camera.frozen = !camera.frozen;
             if (gPlayer1Controller->buttonPressed & L_JPAD) {
                 if (!is_anim_playing) {
                     anim_play_button();
@@ -194,11 +190,45 @@ void keybinds_update() {
 }
 
 void camera_update() {
-    machinimaMode = (camera_frozen) ? 1 : 0;
+    machinimaMode = (camera.frozen) ? 1 : 0;
     machinimaKeyframing = (keyframe_playing && active_data_type == KEY_CAMERA);
 
-    if (camera_frozen && !saturn_disable_sm64_input()) {
-        if (configMCameraMode == 2) {
+    if (camera.frozen && !saturn_disable_sm64_input()) {
+        switch (configMCameraMode) {
+            case 0: 
+                if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_R]) {
+                    cameraRotateUp = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y] & !saturn_disable_sm64_input();
+                    cameraRotateDown = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H] & !saturn_disable_sm64_input();
+                    cameraRotateLeft = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G] & !saturn_disable_sm64_input();
+                    cameraRotateRight = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J] & !saturn_disable_sm64_input();
+                    // Stop from moving
+                    cameraMoveForward = 0;
+                    cameraMoveBackward = 0;
+                    cameraMoveLeft = 0;
+                    cameraMoveRight = 0;
+                } else {
+                    cameraMoveForward = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Y] & !saturn_disable_sm64_input();
+                    cameraMoveBackward = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_H] & !saturn_disable_sm64_input();
+                    cameraMoveLeft = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_G] & !saturn_disable_sm64_input();
+                    cameraMoveRight = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_J] & !saturn_disable_sm64_input();
+                    // Stop from rotating
+                    cameraRotateUp = 0;
+                    cameraRotateDown = 0;
+                    cameraRotateLeft = 0;
+                    cameraRotateRight = 0;
+                }
+                cameraMoveUp = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_T] & !saturn_disable_sm64_input();
+                cameraMoveDown = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_U] & !saturn_disable_sm64_input();
+                break;
+            case 2: 
+                camera.view_enabled = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LSHIFT];
+                camera.view_moving = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_RMASK;
+                camera.view_zooming = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_MMASK;
+                camera.view_rotating = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_LMASK;
+                break;
+                    
+        } /*
+        if (configMCameraMode == 2) { 
             camera_view_enabled = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LSHIFT];
             camera_view_moving = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_RMASK;
             camera_view_zooming = SDL_GetMouseState(NULL, NULL) & SDL_BUTTON_MMASK;
@@ -227,16 +257,16 @@ void camera_update() {
             }
             cameraMoveUp = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_T] & !saturn_disable_sm64_input();
             cameraMoveDown = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_U] & !saturn_disable_sm64_input();
-        }
+        } */
         cameraRollLeft = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_V];
         cameraRollRight = SDL_GetKeyboardState(NULL)[SDL_SCANCODE_B];
     }
 
-    if (!keyframe_playing && !camera_frozen) {
-        gLakituState.focHSpeed = camera_focus * camera_savestate_mult * 0.8f;
-        gLakituState.focVSpeed = camera_focus * camera_savestate_mult * 0.3f;
-        gLakituState.posHSpeed = camera_focus * camera_savestate_mult * 0.3f;
-        gLakituState.posVSpeed = camera_focus * camera_savestate_mult * 0.3f;
+    if (!keyframe_playing && !camera.frozen) {
+        gLakituState.focHSpeed = camera.focus * camera.savestate_mult * 0.8f;
+        gLakituState.focVSpeed = camera.focus * camera.savestate_mult * 0.3f;
+        gLakituState.posHSpeed = camera.focus * camera.savestate_mult * 0.3f;
+        gLakituState.posVSpeed = camera.focus * camera.savestate_mult * 0.3f;
     }
 
     camera_default_fov = camera_fov + 5.0f;
@@ -249,10 +279,10 @@ void keyframe_update() {
         k_current_frame = (uint32_t)mcam_timer;
 
         // Prevents smoothing for sharper, more consistent panning
-        gLakituState.focHSpeed = 15.f * camera_focus * 0.8f;
-        gLakituState.focVSpeed = 15.f * camera_focus * 0.3f;
-        gLakituState.posHSpeed = 15.f * camera_focus * 0.3f;
-        gLakituState.posVSpeed = 15.f * camera_focus * 0.3f;
+        gLakituState.focHSpeed = 15.f * camera.focus * 0.8f;
+        gLakituState.focVSpeed = 15.f * camera.focus * 0.3f;
+        gLakituState.posHSpeed = 15.f * camera.focus * 0.3f;
+        gLakituState.posVSpeed = 15.f * camera.focus * 0.3f;
         
         bool end = true;
         for (const auto& entry : k_frame_keys) {
@@ -270,7 +300,7 @@ void keyframe_update() {
         schroma_imgui_init();
     }
 
-    if (camera_frozen && keyframe_playing) {
+    if (camera.frozen && keyframe_playing) {
         should_update_cam_from_keyframes = false;
         vec3f_copy(gCamera->pos, freezecamPos);
         vec3f_set_dist_and_angle(gCamera->pos, gCamera->focus, 100, freezecamPitch, freezecamYaw);
@@ -492,7 +522,7 @@ bool saturn_keyframe_matches(std::string id, int frame) {
         float value = *(float*)timeline.dest;
         float distance = abs(value - expectedValue);
         if (distance > pow(10, timeline.precision)) {
-            if (id.find("cam") != string::npos) return !is_camera_moving;
+            if (id.find("cam") != string::npos) return !camera.is_moving;
             else return false;
         }
     }

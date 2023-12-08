@@ -160,8 +160,8 @@ void smachinima_imgui_controls(SDL_Event * event) {
 
         case SDL_MOUSEMOTION:
             SDL_Delay(2);
-            camera_view_move_x = event->motion.xrel;
-            camera_view_move_y = event->motion.yrel;
+            camera.view_move[0] = event->motion.xrel;
+            camera.view_move[1] = event->motion.yrel;
         
         break;
     }
@@ -208,7 +208,7 @@ void smachinima_imgui_init() {
 }
 
 void smachinima_imgui_update() {
-    ImGui::Checkbox("Machinima Camera", &camera_frozen);
+    ImGui::Checkbox("Machinima Camera", &camera.frozen);
     if (configMCameraMode == 2) {
         ImGui::SameLine(); imgui_bundled_help_marker("Move Camera -> LShift + Mouse Buttons");
     } else if (configMCameraMode == 1) {
@@ -216,14 +216,14 @@ void smachinima_imgui_update() {
     } else if (configMCameraMode == 0) {
         ImGui::SameLine(); imgui_bundled_help_marker("Move Camera -> Y/G/H/J\nRaise/Lower Camera -> T/U\nRotate Camera -> R + Y/G/H/J");
     }
-    if (configMCameraMode == 0 && camera_frozen || configMCameraMode == 1 && camera_frozen) {
+    if (configMCameraMode == 0 && camera.frozen || configMCameraMode == 1 && camera.frozen) {
         ImGui::SliderFloat("Speed", &camVelSpeed, 0.0f, 2.0f);
         imgui_bundled_tooltip("Controls the speed of the machinima camera while enabled. Default is 1.");
     }
 
     ImGui::SliderFloat("FOV", &camera_fov, 0.0f, 100.0f);
     imgui_bundled_tooltip("Controls the FOV of the in-game camera. Default is 50.\nKeybind -> N/M");
-    ImGui::Checkbox("Smooth###smooth_fov", &camera_fov_smooth);
+    ImGui::Checkbox("Smooth###smooth_fov", &camera.fov_smooth);
 
     if (mario_exists) {
         ImGui::Dummy(ImVec2(0, 5));
@@ -293,7 +293,7 @@ void imgui_machinima_quick_options() {
 
         if (ImGui::Button("Warp to Level")) {
             autoChroma = false;
-            camera_frozen = false;
+            camera.frozen = false;
 
             warp_to_level(current_slevel_index, (s32)currentChromaArea, -1);
             // Erase existing timelines
