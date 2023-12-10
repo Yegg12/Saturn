@@ -689,6 +689,7 @@ void saturn_imgui_update() {
                 ImGui::Separator();
             }
 #endif
+
             ImGui::Text(ICON_FK_FOLDER_OPEN " %s", model_details.c_str());
             ImGui::Text(ICON_FK_FILE_TEXT " %s", cc_details.c_str());
             ImGui::TextDisabled(ICON_FK_PICTURE_O " %i textures loaded", preloaded_textures_count);
@@ -843,8 +844,16 @@ void saturn_keyframe_context_popout(Keyframe keyframe) {
     k_context_popout_keyframe = keyframe;
 }
 
+void saturn_create_timeline(void* dest, KeyframeType type, std::string name, int precision, bool forceWait, float value, InterpolationCurve curve, int position, std::string timelineID) {
+    KeyframeTimeline timeline = KeyframeTimeline(dest, type, name, precision, forceWait);
+    Keyframe keyframe = Keyframe(value, curve, position, timelineID);
+    //k_frame_keys.insert({ timelineID, std::make_pair(timeline, std::vector<Keyframe>{keyframe})});
+    k_current_frame = 0;
+    startFrame = 0;
+} // (TODO) -> Further refactor this code
+
 void saturn_keyframe_float_popout(float* edit_value, string value_name, string id) {
-    bool contains = k_frame_keys.find(id) != k_frame_keys.end();
+    bool contains = saturn_timeline_exists(id.c_str());
 
     string buttonLabel = ICON_FK_LINK "###kb_" + id;
 
@@ -853,15 +862,8 @@ void saturn_keyframe_float_popout(float* edit_value, string value_name, string i
         k_popout_open = true;
         if (contains) k_frame_keys.erase(id);
         else { // Add the timeline
-            KeyframeTimeline timeline = KeyframeTimeline();
-            timeline.type = KFTYPE_FLOAT;
-            timeline.dest = edit_value;
-            timeline.name = value_name;
-            timeline.forceWait = false;
-            timeline.precision = -2; // .01
-            Keyframe keyframe = Keyframe(0, InterpolationCurve::LINEAR);
-            keyframe.value = *edit_value;
-            keyframe.timelineID = id;
+            KeyframeTimeline timeline = KeyframeTimeline(edit_value, KFTYPE_FLOAT, value_name, -2, false);
+            Keyframe keyframe = Keyframe(*edit_value, InterpolationCurve::LINEAR, 0, id);
             k_frame_keys.insert({ id, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
             k_current_frame = 0;
             startFrame = 0;
@@ -870,7 +872,7 @@ void saturn_keyframe_float_popout(float* edit_value, string value_name, string i
     imgui_bundled_tooltip(contains ? "Remove" : "Animate");
 }
 void saturn_keyframe_bool_popout(bool* edit_value, string value_name, string id) {
-    bool contains = k_frame_keys.find(id) != k_frame_keys.end();
+    bool contains = saturn_timeline_exists(id.c_str());
 
     string buttonLabel = ICON_FK_LINK "###kb_" + id;
 
@@ -879,15 +881,8 @@ void saturn_keyframe_bool_popout(bool* edit_value, string value_name, string id)
         k_popout_open = true;
         if (contains) k_frame_keys.erase(id);
         else { // Add the timeline
-            KeyframeTimeline timeline = KeyframeTimeline();
-            timeline.type = KFTYPE_BOOL;
-            timeline.dest = edit_value;
-            timeline.name = value_name;
-            timeline.forceWait = true;
-            timeline.precision = -2; // .01
-            Keyframe keyframe = Keyframe(0, InterpolationCurve::WAIT);
-            keyframe.value = *edit_value ? 1 : 0;
-            keyframe.timelineID = id;
+            KeyframeTimeline timeline = KeyframeTimeline(edit_value, KFTYPE_BOOL, value_name, -2, true);
+            Keyframe keyframe = Keyframe((*edit_value ? 1 : 0), InterpolationCurve::WAIT, 0, id);
             k_frame_keys.insert({ id, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
             k_current_frame = 0;
             startFrame = 0;
@@ -896,7 +891,7 @@ void saturn_keyframe_bool_popout(bool* edit_value, string value_name, string id)
     imgui_bundled_tooltip(contains ? "Remove" : "Animate");
 }
 void saturn_keyframe_camera_popout(string value_name, string id) {
-    bool contains = k_frame_keys.find(id + "_pos0") != k_frame_keys.end();
+    bool contains = saturn_timeline_exists(id.c_str());
 
     string buttonLabel = ICON_FK_LINK "###kb_" + id;
 
@@ -925,15 +920,8 @@ void saturn_keyframe_camera_popout(string value_name, string id) {
         }
         else { // Add the timeline
             for (int i = 0; i < IM_ARRAYSIZE(values); i++) {
-                KeyframeTimeline timeline = KeyframeTimeline();
-                timeline.type = KFTYPE_FLOAT;
-                timeline.dest = values[i].second.second;
-                timeline.name = value_name + " " + values[i].first.second;
-                timeline.forceWait = false;
-                timeline.precision = values[i].second.first;
-                Keyframe keyframe = Keyframe(0, InterpolationCurve::LINEAR);
-                keyframe.value = *values[i].second.second;
-                keyframe.timelineID = id + "_" + values[i].first.first;
+                KeyframeTimeline timeline = KeyframeTimeline(values[i].second.second, KFTYPE_FLOAT, (value_name + " " + values[i].first.second), values[i].second.first, false);
+                Keyframe keyframe = Keyframe(*values[i].second.second, InterpolationCurve::LINEAR, 0, (id + "_" + values[i].first.first));
                 k_frame_keys.insert({ id + "_" + values[i].first.first, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
                 k_current_frame = 0;
                 startFrame = 0;
@@ -942,8 +930,9 @@ void saturn_keyframe_camera_popout(string value_name, string id) {
     }
     imgui_bundled_tooltip(contains ? "Remove" : "Animate");
 }
+
 void saturn_keyframe_color_popout(string value_name, string id, float* r, float* g, float* b) {
-    bool contains = k_frame_keys.find(id + "_r") != k_frame_keys.end();
+    bool contains = saturn_timeline_exists(id.c_str());
 
     string buttonLabel = ICON_FK_LINK "###kb_" + id;
 
@@ -963,14 +952,37 @@ void saturn_keyframe_color_popout(string value_name, string id, float* r, float*
         }
         else { // Add the timeline
             for (int i = 0; i < IM_ARRAYSIZE(values); i++) {
-                KeyframeTimeline timeline = KeyframeTimeline();
-                timeline.dest = values[i].second.second;
-                timeline.name = value_name + " " + values[i].first.second;
-                timeline.forceWait = false;
-                timeline.precision = values[i].second.first;
-                Keyframe keyframe = Keyframe(0, InterpolationCurve::LINEAR);
-                keyframe.value = *values[i].second.second;
-                keyframe.timelineID = id + "_" + values[i].first.first;
+                KeyframeTimeline timeline = KeyframeTimeline(values[i].second.second, (value_name + " " + values[i].first.second), values[i].second.first, false);
+                Keyframe keyframe = Keyframe(*values[i].second.second, InterpolationCurve::LINEAR, 0, (id + "_" + values[i].first.first));
+                k_frame_keys.insert({ id + "_" + values[i].first.first, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
+                k_current_frame = 0;
+                startFrame = 0;
+            }
+        }
+    }
+    imgui_bundled_tooltip(contains ? "Remove" : "Animate");
+}
+void saturn_keyframe_rotation_popout(string value_name, string id, float* yaw, float* pitch) {
+    bool contains = saturn_timeline_exists(id.c_str());
+
+    string buttonLabel = ICON_FK_LINK "###kb_" + id;
+
+    if (ImGui::Button(buttonLabel.c_str())) {
+        // ((id, name), (precision, value_ptr))
+        std::pair<std::pair<std::string, std::string>, std::pair<int, float*>> values[] = {
+            std::make_pair(std::make_pair("yaw", "Yaw"), std::make_pair(0, yaw)),
+            std::make_pair(std::make_pair("pitch", "Pitch"), std::make_pair(0, pitch)),
+        };
+        k_popout_open = true;
+        if (contains) {
+            for (int i = 0; i < IM_ARRAYSIZE(values); i++) {
+                k_frame_keys.erase(id + "_" + values[i].first.first);
+            }
+        }
+        else { // Add the timeline
+            for (int i = 0; i < IM_ARRAYSIZE(values); i++) {
+                KeyframeTimeline timeline = KeyframeTimeline(values[i].second.second, (value_name + " " + values[i].first.second), values[i].second.first, false);
+                Keyframe keyframe = Keyframe(*values[i].second.second, InterpolationCurve::LINEAR, 0, (id + "_" + value[i].first.first));
                 k_frame_keys.insert({ id + "_" + values[i].first.first, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
                 k_current_frame = 0;
                 startFrame = 0;
@@ -981,7 +993,7 @@ void saturn_keyframe_color_popout(string value_name, string id, float* r, float*
 }
 
 void saturn_keyframe_anim_popout(string value_name, string id) {
-    bool contains = k_frame_keys.find(id) != k_frame_keys.end();
+    bool contains = saturn_timeline_exists(id.c_str());
 
     string buttonLabel = ICON_FK_LINK "###kb_" + id;
 
@@ -989,15 +1001,8 @@ void saturn_keyframe_anim_popout(string value_name, string id) {
         k_popout_open = true;
         if (contains) k_frame_keys.erase(id);
         else { // Add the timeline
-            KeyframeTimeline timeline = KeyframeTimeline();
-            timeline.type = KFTYPE_FLAGS;
-            timeline.dest = &k_current_anim;
-            timeline.name = value_name;
-            timeline.forceWait = true;
-            timeline.precision = 0; // 0
-            Keyframe keyframe = Keyframe(0, InterpolationCurve::WAIT);
-            keyframe.value = *(float*)&k_current_anim;
-            keyframe.timelineID = id;
+            KeyframeTimeline timeline = KeyframeTimeline(&k_current_anim, KFTYPE_FLAGS, value_name, 0, true);
+            Keyframe keyframe = Keyframe(*(float*)&k_current_anim, InterpolationCurve::WAIT, 0, id);
             k_frame_keys.insert({ id, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
             k_current_frame = 0;
             startFrame = 0;
@@ -1019,156 +1024,3 @@ bool saturn_disable_sm64_input() {
     return ImGui::GetIO().WantTextInput;
 }
 
-template <typename T>
-void saturn_keyframe_popout(const T &edit_value, s32 data_type, string value_name, string id) {
-    /*string buttonLabel = ICON_FK_LINK "###kb_" + id;
-    string windowLabel = "Timeline###kw_" + id;
-
-#ifdef DISCORDRPC
-    discord_state = "In-Game // Keyframing";
-#endif
-
-    ImGui::SameLine();
-    if (ImGui::Button(buttonLabel.c_str())) {
-        if (active_key_float_value != edit_value) {
-            keyframe_playing = false;
-            k_last_placed_frame = 0;
-            k_frame_keys = {0};
-            k_v_float_keys = {0.f};
-
-            k_c_pos1_keys = {0.f};
-            k_c_pos2_keys = {0.f};
-            k_c_foc0_keys = {0.f};
-            k_c_foc1_keys = {0.f};
-            k_c_foc2_keys = {0.f};
-            k_c_rot0_keys = {0.f};
-            k_c_rot1_keys = {0.f};
-        }
-
-        k_popout_open = true;
-        active_key_float_value = edit_value;
-        active_data_type = data_type;
-    }
-
-    if (k_popout_open && active_key_float_value == edit_value) {
-        if (windowSettings) windowSettings = false;
-
-        ImGuiWindowFlags timeline_flags = imgui_bundled_window_corner(1, 0, 0, 0.64f);
-        ImGui::Begin(windowLabel.c_str(), &k_popout_open, timeline_flags);
-        if (!keyframe_playing) {
-            if (ImGui::Button(ICON_FK_PLAY " Play###k_t_play")) {
-                saturn_play_keyframe();
-            }
-            ImGui::SameLine();
-            ImGui::Checkbox("Loop###k_t_loop", &k_loop);
-            ImGui::SameLine(180);
-            if (ImGui::Button(ICON_FK_TRASH_O " Clear All###k_t_clear")) {
-                k_last_placed_frame = 0;
-                k_frame_keys = {0};
-                k_v_float_keys = {0.f};
-                k_v_int_keys = {0};
-                
-                k_c_pos1_keys = {0.f};
-                k_c_pos2_keys = {0.f};
-                k_c_foc0_keys = {0.f};
-                k_c_foc1_keys = {0.f};
-                k_c_foc2_keys = {0.f};
-                k_c_rot0_keys = {0.f};
-                k_c_rot1_keys = {0.f};
-            }
-        } else {
-            if (ImGui::Button(ICON_FK_STOP " Stop###k_t_stop")) {
-                keyframe_playing = false;
-            }
-            ImGui::SameLine();
-            ImGui::Checkbox("Loop###k_t_loop", &k_loop);
-        }
-
-        ImGui::Separator();
-
-        ImGui::PushItemWidth(35);
-        if (ImGui::InputInt("Frames", &endFrameText, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue)) {
-            if (endFrameText >= 60) {
-                endFrame = (uint32_t)endFrameText;
-            } else {
-                endFrame = 60;
-                endFrameText = 60;
-            }
-        }
-        ImGui::PopItemWidth();
-                
-        // Popout
-        if (ImGui::BeginNeoSequencer("Sequencer###k_sequencer", (uint32_t*)&k_current_frame, &startFrame, &endFrame, ImVec2(endFrame * 6, 0), ImGuiNeoSequencerFlags_HideZoom)) {
-            if (ImGui::BeginNeoTimeline(value_name.c_str(), k_frame_keys)) { ImGui::EndNeoTimeLine(); }
-            if (data_type == KEY_CAMERA) if(ImGui::BeginNeoTimeline("Rotation", k_frame_keys)) { ImGui::EndNeoTimeLine(); }
-            ImGui::EndNeoSequencer();
-        }
-
-        // UI Controls
-        if (!keyframe_playing) {
-            if (k_current_frame != 0) {
-                if (std::find(k_frame_keys.begin(), k_frame_keys.end(), k_current_frame) != k_frame_keys.end()) {
-                    // We are hovering over a keyframe
-                    auto it = std::find(k_frame_keys.begin(), k_frame_keys.end(), k_current_frame);
-                    if (it != k_frame_keys.end()) {
-                        int key_index = it - k_frame_keys.begin();
-                        if (ImGui::Button(ICON_FK_MINUS_SQUARE " Delete Keyframe###k_d_frame")) {
-                            // Delete Keyframe
-                            k_frame_keys.erase(k_frame_keys.begin() + key_index);
-                            if (data_type == KEY_FLOAT || data_type == KEY_CAMERA) k_v_float_keys.erase(k_v_float_keys.begin() + key_index);
-                            if (data_type == KEY_INT) k_v_int_keys.erase(k_v_int_keys.begin() + key_index);
-
-                            if (data_type == KEY_CAMERA) {
-                                k_c_pos1_keys.erase(k_c_pos1_keys.begin() + key_index);
-                                k_c_pos2_keys.erase(k_c_pos2_keys.begin() + key_index);
-                                k_c_foc0_keys.erase(k_c_foc0_keys.begin() + key_index);
-                                k_c_foc1_keys.erase(k_c_foc1_keys.begin() + key_index);
-                                k_c_foc2_keys.erase(k_c_foc2_keys.begin() + key_index);
-                                k_c_rot0_keys.erase(k_c_rot0_keys.begin() + key_index);
-                                k_c_rot1_keys.erase(k_c_rot1_keys.begin() + key_index);
-                            }
-
-                            k_last_placed_frame = k_frame_keys[k_frame_keys.size() - 1];
-                        } ImGui::SameLine(); ImGui::Text("at %i", (int)k_current_frame);
-                    }
-                } else {
-                    // No keyframe here
-                    if (ImGui::Button(ICON_FK_PLUS_SQUARE " Create Keyframe###k_c_frame")) {
-                        if (k_last_placed_frame > k_current_frame) {
-                            
-                        } else {
-                            k_frame_keys.push_back(k_current_frame);
-                            if (data_type == KEY_FLOAT || data_type == KEY_CAMERA) k_v_float_keys.push_back(*edit_value);
-                            if (data_type == KEY_INT) k_v_int_keys.push_back(*edit_value);
-
-                            if (data_type == KEY_CAMERA) {
-                                f32 dist;
-                                s16 pitch, yaw;
-                                vec3f_get_dist_and_angle(gCamera->pos, gCamera->focus, &dist, &pitch, &yaw);
-                                k_c_pos1_keys.push_back(gCamera->pos[1]);
-                                k_c_pos2_keys.push_back(gCamera->pos[2]);
-                                k_c_foc0_keys.push_back(gCamera->focus[0]);
-                                k_c_foc1_keys.push_back(gCamera->focus[1]);
-                                k_c_foc2_keys.push_back(gCamera->focus[2]);
-                                k_c_rot0_keys.push_back(yaw);
-                                k_c_rot1_keys.push_back(pitch);
-                                std::cout << pitch << std::endl;
-                            }
-                            k_last_placed_frame = k_current_frame;
-                        }
-                    } ImGui::SameLine(); ImGui::Text("at %i", (int)k_current_frame);
-                }
-            } else {
-                // On frame 0
-                if (data_type == KEY_CAMERA)
-                    ImGui::Text("(Setting initial value)");
-            }
-        }
-        ImGui::End();
-
-        // Auto focus (use controls without clicking window first)
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && accept_text_input == false) {
-            ImGui::SetWindowFocus(windowLabel.c_str());
-        }
-    }*/
-}
