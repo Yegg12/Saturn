@@ -141,6 +141,20 @@ void anim_play_button(int animation) {
     anim_play_button();
 }
 
+void saturn_create_object(int model, const BehaviorScript* behavior, float x, float y, float z, s16 pitch, s16 yaw, s16 roll, int behParams) {
+    Object* obj = spawn_object(gMarioState->marioObj, model, behavior);
+    obj->oPosX = x;
+    obj->oPosY = y;
+    obj->oPosZ = z;
+    obj->oHomeX = x;
+    obj->oHomeY = y;
+    obj->oHomeZ = z;
+    obj->oFaceAnglePitch = pitch;
+    obj->oFaceAngleYaw = yaw;
+    obj->oFaceAngleRoll = roll;
+    obj->oBehParams = behParams;
+}
+
 void smachinima_imgui_controls(SDL_Event * event) {
     switch (event->type){
         case SDL_KEYDOWN:
@@ -150,13 +164,13 @@ void smachinima_imgui_controls(SDL_Event * event) {
                 if (camera_fov >= 2.0f) camera_fov -= 2.f;
             }
 
-            if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LSHIFT]) {
+            /*if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LSHIFT]) {
                 if (!saturn_disable_sm64_input()) {
                     if (event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9) {
                         saturn_load_expression_number(event->key.keysym.sym);
                     }
                 };
-            }
+            }*/
 
         case SDL_MOUSEMOTION:
             SDL_Delay(2);
@@ -271,9 +285,12 @@ void imgui_machinima_quick_options() {
     }
 
     if (mario_exists) {
-        if (ImGui::MenuItem(ICON_FK_PAPER_PLANE_O " Fly Mode",      "F2", gMarioState->action == ACT_DEBUG_FREE_MOVE, gMarioState->action == ACT_IDLE | gMarioState->action == ACT_DEBUG_FREE_MOVE)) {
-            if (gMarioState->action == ACT_IDLE) set_mario_action(gMarioState, ACT_DEBUG_FREE_MOVE, 0);
-            else set_mario_action(gMarioState, ACT_IDLE, 0);
+        if (ImGui::MenuItem(ICON_FK_PAPER_PLANE_O " Fly Mode",      "F2", gMarioState->action == ACT_DEBUG_FREE_MOVE)) {
+            if (gMarioState->action == ACT_DEBUG_FREE_MOVE) {
+                reset_camera(gCamera);
+                set_mario_action(gMarioState, ACT_IDLE, 0);
+            }
+            else set_mario_action(gMarioState, ACT_DEBUG_FREE_MOVE, 0);
         }
         ImGui::Separator();
 
@@ -348,8 +365,8 @@ void imgui_machinima_quick_options() {
         if (enable_time_freeze) enable_time_stop_including_mario();
         else disable_time_stop_including_mario();
     }
+    imgui_bundled_tooltip("Pauses all in-game movement, excluding the camera.");
     saturn_keyframe_bool_popout(&enable_time_freeze, "Time Freeze", "k_time_freeze");
-    imgui_bundled_tooltip("Freezes everything excluding the camera.");
     ImGui::Checkbox("Object Interactions", (bool*)&enable_dialogue);
     imgui_bundled_tooltip("Toggles interactions with some objects; This includes opening/closing doors, triggering dialogue when interacting with an NPC or readable sign, etc.");
     if (mario_exists) {
@@ -402,17 +419,12 @@ void imgui_machinima_quick_options() {
             ImGui::InputInt4("###obj_beh_params", obj_beh_params);
             ImGui::Separator();
             if (ImGui::Button("Spawn Object")) {
-                Object* obj = spawn_object(gMarioState->marioObj, obj_models[obj_model].second, obj_behaviors[obj_beh].second);
-                obj->oPosX = obj_pos[0];
-                obj->oPosY = obj_pos[1];
-                obj->oPosZ = obj_pos[2];
-                obj->oHomeX = obj_pos[0];
-                obj->oHomeY = obj_pos[1];
-                obj->oHomeZ = obj_pos[2];
-                obj->oFaceAnglePitch = obj_rot[0];
-                obj->oFaceAngleYaw = obj_rot[1];
-                obj->oFaceAngleRoll = obj_rot[2];
-                obj->oBehParams = ((obj_beh_params[0] & 0xFF) << 24) | ((obj_beh_params[1] & 0xFF) << 16) | ((obj_beh_params[2] & 0xFF) << 8) | (obj_beh_params[3] & 0xFF);
+                saturn_create_object(
+                    obj_models[obj_model].second, obj_behaviors[obj_beh].second,
+                    obj_pos[0], obj_pos[1], obj_pos[2],
+                    obj_rot[0], obj_rot[1], obj_rot[2],
+                    ((obj_beh_params[0] & 0xFF) << 24) | ((obj_beh_params[1] & 0xFF) << 16) | ((obj_beh_params[2] & 0xFF) << 8) | (obj_beh_params[3] & 0xFF)
+                );
             }
             ImGui::EndMenu();
         }

@@ -16,6 +16,24 @@
 #include "saturn/imgui/saturn_imgui_dynos.h"
 #include "saturn/filesystem/saturn_locationfile.h"
 #include "data/dynos.cpp.h"
+#include "saturn/filesystem/saturn_registerfile.h"
+#include "saturn/cmd/saturn_cmd.h"
+
+extern "C" {
+#include "game/camera.h"
+#include "game/area.h"
+#include "game/level_update.h"
+#include "engine/level_script.h"
+#include "game/game_init.h"
+#include "data/dynos.h"
+#include "pc/configfile.h"
+#include "game/mario.h"
+#include <mario_animation_ids.h>
+#include <sm64.h>
+#include "pc/controller/controller_keyboard.h"
+#include "pc/cheats.h"
+#include "game/save_file.h"
+}
 
 extern "C" {
 #include "game/camera.h"
@@ -125,8 +143,6 @@ float k_c_rot1_incr;
 float k_c_rot2_incr;
 bool has_set_initial_k_frames;
 
-std::string model_details;
-std::string cc_details;
 bool is_cc_editing;
 
 bool autoChroma;
@@ -134,6 +150,10 @@ bool autoChromaLevel;
 bool autoChromaObjects;
 
 u8 activatedToads = 0;
+
+f32 mario_headrot_yaw = 0;
+f32 mario_headrot_pitch = 0;
+f32 mario_headrot_speed = 10.0f;
 
 using namespace std;
 
@@ -147,6 +167,7 @@ int autosaveDelay = -1;
 u16 gChromaKeyColor = 0x07C1;
 u16 gChromaKeyBackground = 0;
 
+u8 godmode_temp_off = false;
 
 extern void saturn_run_chainer();
 
@@ -678,11 +699,12 @@ const char* saturn_get_stage_name(int courseNum) {
 void saturn_do_load() {
     if (!(save_file_get_flags() & SAVE_FLAG_TALKED_TO_ALL_TOADS)) DynOS_Gfx_GetPacks().Clear();
     DynOS_Opt_Init();
-    model_details = "" + std::to_string(DynOS_Gfx_GetPacks().Count()) + " model pack";
-    if (DynOS_Gfx_GetPacks().Count() != 1) model_details += "s";
+    //model_details = "" + std::to_string(DynOS_Gfx_GetPacks().Count()) + " model pack";
+    //if (DynOS_Gfx_GetPacks().Count() != 1) model_details += "s";
     saturn_imgui_init();
     saturn_load_locations();
     saturn_launch_timer = 0;
+    saturn_cmd_registers_load();
 }
 void saturn_on_splash_finish() {
     splash_finished = true;
