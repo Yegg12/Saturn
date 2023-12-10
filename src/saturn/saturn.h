@@ -8,6 +8,12 @@
 #include <SDL2/SDL.h>
 #include "types.h"
 
+#ifdef __cplusplus
+#include <string>
+#include <vector>
+#include <map>
+#endif
+
 extern bool mario_exists;
 
 extern struct camera_t {
@@ -56,10 +62,6 @@ extern float this_face_angle;
 extern bool limit_fps;
 extern bool has_discord_init;
 
-extern unsigned int chromaKeyColorR;
-extern unsigned int chromaKeyColorG;
-extern unsigned int chromaKeyColorB;
-
 extern u16 gChromaKeyColor;
 extern u16 gChromaKeyBackground;
 
@@ -85,10 +87,6 @@ extern bool keyframe_playing;
 extern int k_previous_frame;
 
 #ifdef __cplusplus
-#include <string>
-#include <vector>
-#include <map>
-
 enum InterpolationCurve {
     LINEAR,
     SINE,
@@ -112,23 +110,31 @@ inline std::string curveNames[] = {
 
 class Keyframe {
     public:
-    float value;
-    InterpolationCurve curve;
-    int position;
-    std::string timelineID;
-    Keyframe(int _position, InterpolationCurve _curve) {
-        position = _position;
-        curve = _curve;
-    }
+        float value;
+        InterpolationCurve curve;
+        int position;
+        std::string timelineID;
+
+        Keyframe(float value, InterpolationCurve curve, int position, std::string timelineID)
+            : value(value), curve(curve), position(position), timelineID(timelineID)
+        {}
 };
 
 class KeyframeTimeline {
     public:
-    void* dest = nullptr;
-    KeyframeType type;
-    std::string name;
-    int precision;
-    bool forceWait;
+        void* dest = nullptr;
+        KeyframeType type;
+        std::string name;
+        int precision;
+        bool forceWait;
+
+        KeyframeTimeline(void* dest, KeyframeType type, std::string name, int precision, bool forceWait)
+            : dest(dest), type(type), name(name), precision(precision), forceWait(forceWait)
+        {}
+
+        KeyframeTimeline(void* dest, std::string name, int precision, bool forceWait)
+            : dest(dest), name(name), precision(precision), forceWait(forceWait)
+        {}
 };
 
 extern bool k_popout_open;
