@@ -1253,7 +1253,7 @@ void saturn_keyframe_rotation_popout(string value_name, string id, float* yaw, f
         else { // Add the timeline
             for (int i = 0; i < IM_ARRAYSIZE(values); i++) {
                 KeyframeTimeline timeline = KeyframeTimeline(values[i].second.second, (value_name + " " + values[i].first.second), values[i].second.first, false);
-                Keyframe keyframe = Keyframe(*values[i].second.second, InterpolationCurve::LINEAR, 0, (id + "_" + value[i].first.first));
+                Keyframe keyframe = Keyframe(*values[i].second.second, InterpolationCurve::LINEAR, 0, (id + "_" + values[i].first.first));
                 k_frame_keys.insert({ id + "_" + values[i].first.first, std::make_pair(timeline, std::vector<Keyframe>{ keyframe }) });
                 k_current_frame = 0;
                 startFrame = 0;

@@ -115,6 +115,10 @@ class Keyframe {
         int position;
         std::string timelineID;
 
+        Keyframe(int position, InterpolationCurve curve)
+            : position(position), curve(curve)
+        {}
+
         Keyframe(float value, InterpolationCurve curve, int position, std::string timelineID)
             : value(value), curve(curve), position(position), timelineID(timelineID)
         {}
@@ -127,6 +131,9 @@ class KeyframeTimeline {
         std::string name;
         int precision;
         bool forceWait;
+
+        KeyframeTimeline()
+        {}
 
         KeyframeTimeline(void* dest, KeyframeType type, std::string name, int precision, bool forceWait)
             : dest(dest), type(type), name(name), precision(precision), forceWait(forceWait)

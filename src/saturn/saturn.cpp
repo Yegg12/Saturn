@@ -706,9 +706,15 @@ void saturn_do_load() {
     saturn_launch_timer = 0;
     saturn_cmd_registers_load();
 }
+
 void saturn_on_splash_finish() {
     splash_finished = true;
 }
+
 s32 saturn_should_show_splash() {
     return configSaturnSplash;
+}
+
+bool saturn_timeline_exists(const char* name) {
+    return k_frame_keys.find(name) != k_frame_keys.end();
 }

@@ -151,8 +151,8 @@ void cmd_camera_fov(CommandContext context) {
     else camera_fov = arg_flt("fov");
 }
 void cmd_camera_follow(CommandContext context) {
-    if (arg_int("operation")) camera_focus += arg_flt("follow");
-    else camera_focus = arg_flt("follow");
+    if (arg_int("operation")) camera.focus += arg_flt("follow");
+    else camera.focus = arg_flt("follow");
 }
 void cmd_timeline_delete(CommandContext context) {
     std::string id = arg_str("timeline");
