@@ -7,6 +7,7 @@
 #include <mario_animation_ids.h>
 #include <SDL2/SDL.h>
 #include "types.h"
+#include "saturn/saturn_animations.h"
 
 #ifdef __cplusplus
 #include <string>
@@ -44,18 +45,23 @@ extern bool linkMarioScale;
 extern bool is_spinning;
 extern float spin_mult;
 
-extern bool is_custom_anim;
+struct AnimationState {
+    bool custom;
+    bool hang;
+    bool loop;
+    float speed;
+    int id;
+};
+
 extern bool using_chainer;
 extern int chainer_index;
-extern bool is_anim_playing;
 extern enum MarioAnimID selected_animation;
-extern bool is_anim_looped;
-extern bool is_anim_hang;
-extern float anim_speed;
 extern int current_anim_frame;
 extern int current_anim_id;
 extern int current_anim_length;
+extern bool is_anim_playing;
 extern bool is_anim_paused;
+extern struct AnimationState current_animation;
 
 extern float this_face_angle;
 
@@ -86,74 +92,62 @@ extern f32 mario_headrot_speed;
 extern bool keyframe_playing;
 extern int k_previous_frame;
 
+extern bool extract_thread_began;
+extern bool extraction_finished;
+extern float extraction_progress;
+
 #ifdef __cplusplus
 enum InterpolationCurve {
     LINEAR,
-    SINE,
-    QUADRATIC,
-    CUBIC,
+    SLOW,
+    FAST,
+    SMOOTH,
     WAIT
 };
 enum KeyframeType {
     KFTYPE_FLOAT,
-    KFTYPE_FLAGS,
-    KFTYPE_BOOL
+    KFTYPE_BOOL,
+    KFTYPE_ANIM,
+    KFTYPE_EXPRESSION,
+    KFTYPE_COLOR,
 };
 
 inline std::string curveNames[] = {
     "Linear",
-    "Sine",
-    "Quadratic",
-    "Cubic",
-    "Wait"
+    "Start Slow",
+    "Start Fast",
+    "Smooth",
+    "Hold"
 };
 
-class Keyframe {
-    public:
-        float value;
-        InterpolationCurve curve;
-        int position;
-        std::string timelineID;
-
-        Keyframe(int position, InterpolationCurve curve)
-            : position(position), curve(curve)
-        {}
-
-        Keyframe(float value, InterpolationCurve curve, int position, std::string timelineID)
-            : value(value), curve(curve), position(position), timelineID(timelineID)
-        {}
+struct Keyframe {
+    std::vector<float> value;
+    InterpolationCurve curve;
+    int position;
+    std::string timelineID;
 };
 
-class KeyframeTimeline {
-    public:
-        void* dest = nullptr;
-        KeyframeType type;
-        std::string name;
-        int precision;
-        bool forceWait;
-
-        KeyframeTimeline()
-        {}
-
-        KeyframeTimeline(void* dest, KeyframeType type, std::string name, int precision, bool forceWait)
-            : dest(dest), type(type), name(name), precision(precision), forceWait(forceWait)
-        {}
-
-        KeyframeTimeline(void* dest, std::string name, int precision, bool forceWait)
-            : dest(dest), name(name), precision(precision), forceWait(forceWait)
-        {}
+struct KeyframeTimeline {
+    void* dest = nullptr;
+    KeyframeType type;
+    std::string name;
+    int precision;
+    int numValues;
+    char behavior;
+    bool eventPlace;
 };
+
+#define KFBEH_DEFAULT 0
+#define KFBEH_FORCE_WAIT 1
+#define KFBEH_EVENT 2
 
 extern bool k_popout_open;
+extern bool k_popout_focused;
 extern float* active_key_float_value;
 extern bool* active_key_bool_value;
 extern s32 active_data_type;
 extern int k_current_frame;
 extern int k_curr_curve_type;
-extern int k_current_anim;
-extern int k_prev_anim;
-
-extern bool place_keyframe_anim;
 
 extern std::map<std::string, std::pair<KeyframeTimeline, std::vector<Keyframe>>> k_frame_keys;
 
@@ -176,8 +170,7 @@ extern void saturn_paste_camera(void);
 extern bool saturn_keyframe_apply(std::string, int);
 extern bool saturn_keyframe_matches(std::string, int);
 
-extern double saturn_expression_encode();
-extern void saturn_expression_decode(double);
+extern void schedule_animation();
 
 extern "C" {
 #endif
@@ -190,6 +183,7 @@ extern "C" {
     void saturn_on_splash_finish();
     bool saturn_timeline_exists(const char*);
     s32 saturn_should_show_splash();
+    s32 saturn_begin_extract_rom_thread();
     void saturn_onkeydown(int);
 #ifdef __cplusplus
 }

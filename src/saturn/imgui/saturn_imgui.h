@@ -23,14 +23,14 @@ enum {
     KEY_COLOR,
 };
 
-extern void saturn_keyframe_float_popout(float* edit_value, std::string value_name, std::string id);
-extern void saturn_keyframe_bool_popout(bool* edit_value, std::string value_name, std::string id);
-extern void saturn_keyframe_camera_popout(std::string value_name, std::string id);
-extern void saturn_keyframe_color_popout(std::string value_name, std::string id, float* r, float* g, float* b);
-extern void saturn_keyframe_anim_popout(std::string value_name, std::string id);
-extern void saturn_keyframe_rotation_popout(std::string value_name, std::string id, float* yaw, float* pitch);
+extern void saturn_create_keyframe(std::string id, InterpolationCurve curve);
+extern void saturn_keyframe_popout(std::string id);
+extern void saturn_keyframe_popout(std::vector<std::string> id);
+extern void saturn_keyframe_popout_next_line(std::string id);
+extern void saturn_keyframe_popout_next_line(std::vector<std::string> id);
 
 extern void saturn_keyframe_context_popout(Keyframe keyframe);
+extern void saturn_keyframe_show_kf_content(Keyframe keyframe);
 
 extern void saturn_keyframe_sort(std::vector<Keyframe>* keyframes);
 
@@ -52,6 +52,8 @@ extern bool splash_finished;
 
 extern std::string editor_theme;
 extern std::vector<std::pair<std::string, std::string>> theme_list;
+
+extern bool k_context_popout_open;
 
 extern "C" {
 #endif
